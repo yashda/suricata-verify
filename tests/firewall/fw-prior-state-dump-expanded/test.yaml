@@ -1,0 +1,62 @@
+requires:
+  min-version: 8
+
+# No packets are processed — --dump-expanded-rules prints the expanded
+# rule set to stdout and exits before any capture runs.
+pcap: false
+
+args:
+  - --dump-expanded-rules
+
+checks:
+  # Normalize the two install-specific fields in the captured stdout
+  # (sub-SID runtime values and the absolute path of test.rules) and
+  # diff against the checked-in `dump.expected` golden. check_dump.sh
+  # prints nothing on success and a unified diff on mismatch.
+  - shell:
+      args: /bin/sh ../check_dump.sh
+      expect: ""
+
+  # Parent SIDs (1003, 3003) come from the author and are stable across
+  # installs. Assert each Decision_Hook attribution comment appears
+  # exactly once.
+  - shell:
+      args: grep -c "^# sid 1003 (parent), from <tls:client_hello_done at " stdout | xargs
+      expect: 1
+  - shell:
+      args: grep -c "^# sid 3003 (parent), from <dns:request_complete at " stdout | xargs
+      expect: 1
+
+  # TLS expansion per design §Worked Example (TLS SNI allow-list) emits
+  # 11 auto-accepted sub rules (4 TCP handshake + 7 TLS prerequisites)
+  # plus 1 Decision_Hook rule = 12 rules total.
+  - shell:
+      args: grep -c "^# sid [0-9]\\+ (sub 1003\\." stdout | xargs
+      expect: 11
+
+  # DNS expansion per design §Worked Example (DNS query allow-list) now
+  # emits 9 auto-accepted sub rules (4 TCP handshake + 2 UDP transport +
+  # 3 DNS built-in hooks) plus 1 Decision_Hook rule = 10 rules total.
+  # DNS is multi-transport (both TCP and UDP are registered) and the
+  # expansion emits the handshake for every supported transport (Req
+  # 1.3).
+  - shell:
+      args: grep -c "^# sid [0-9]\\+ (sub 3003\\." stdout | xargs
+      expect: 9
+
+  # Every auto-accepted sub rule must carry noalert; (Decision 2:
+  # customer-facing SID abstraction enforced at the Signature level).
+  # 11 TLS sub rules + 9 DNS sub rules = 20 noalert-bearing rules.
+  # Pattern uses `.*noalert;` without a literal space before `noalert;`
+  # so it matches both transport-handshake rules (which have a literal
+  # space before `noalert;` after the `flags:` tail) and app-layer
+  # prerequisite rules (which open their options block with
+  # `(noalert;`, no leading space).
+  - shell:
+      args: grep -c "^accept:hook.*noalert; sid:" stdout | xargs
+      expect: 20
+
+  # Neither Decision_Hook rule carries noalert;.
+  - shell:
+      args: grep -c "^accept:tx.*noalert;" stdout | xargs
+      expect: 0

@@ -1,0 +1,15 @@
+# Intent-Based Firewall Rules (Auto-Accept Prior States) POC fixture:
+#
+# One Prior_State_Rule in `<` operator form targeting DNS, a
+# multi-transport protocol (both TCP and UDP are registered upstream).
+# The Prior_State pipeline expands this single line into the 10-rule
+# set described in design §Worked Example (DNS query allow-list):
+# 4 TCP handshake rules + 2 UDP transport rules + 3 DNS prerequisite
+# rules + 1 Decision_Hook rule. The input PCAP carries DNS traffic on
+# both transports — a UDP query/response pair for `www.amazon.com` and
+# a DNS-over-TCP query/response flow (with TCP handshake + teardown)
+# for the same name — so both the UDP path (subs 5..6) and the TCP
+# path (subs 1..4) are exercised. Both queries match the author's
+# `dns.query` condition and fire sid:3003 exactly once each.
+
+accept:tx <dns:request_complete $HOME_NET any -> $EXTERNAL_NET 53 (dns.query; content:".amazon.com"; endswith; sid:3003;)

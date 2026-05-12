@@ -1,0 +1,70 @@
+requires:
+  min-version: 8
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  # The author's single Prior_State_Rule expands into the 10-rule set
+  # described in design §Worked Example (DNS query allow-list):
+  # 4 TCP handshake + 2 UDP transport + 3 DNS prerequisites +
+  # 1 Decision_Hook. The load notice proves all 10 expanded rules were
+  # synthesised and accepted by the firewall loader from the single
+  # author-visible rule in firewall.rules — this is the multi-transport
+  # expansion that covers both UDP and TCP paths through one rule
+  # (Req 1.3, 1.4, 1.5).
+  - shell:
+      args: 'grep -cE "Notice: detect: fw: 10 rules loaded from .*firewall\.rules" stdout | xargs'
+      expect: 1
+
+  # No drop event: every packet in both the UDP and the TCP DNS flows
+  # is accepted via one of the 10 Expanded_Rules. A drop on the TCP
+  # flow would prove the 4 TCP handshake rules aren't gating the
+  # `tcp:all` states; a drop on the UDP flow would prove the 2 UDP
+  # transport rules aren't gating the `udp:all` states. Zero drops
+  # across both transports is the end-to-end proof that Step 2 emits
+  # one handshake block per transport in
+  # `StateMachineRegistryGetSupportedTransports(ALPROTO_DNS)`
+  # (Req 1.3).
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+
+  # Customer-facing SID abstraction (design Decision 2 / Req 7.3, 7.4):
+  # no derived Sub_SID ever appears in customer-facing output. Any
+  # alert record with signature_id >= 0x80000000 (2147483648) would be a
+  # leak of the expansion to the customer and is a defect. Check by
+  # grepping eve.json directly: match `"signature_id":` followed by any
+  # decimal that starts with 2-9 and has 10 or more digits, which is
+  # exactly the 0x80000000-and-up range.
+  - shell:
+      args: grep -cE '"signature_id":[2-9][0-9]{9,}' eve.json | xargs
+      expect: 0
+
+  # Multi-transport coverage: the PCAP carries two DNS queries for
+  # `www.amazon.com` — one over UDP, one over TCP — both of which
+  # match the author's `dns.query` content-suffix condition. Each
+  # query produces a dns request record on its respective transport
+  # (UDP and TCP); grep counts both directly from eve.json instead of
+  # using the filter DSL so the nested `dns.queries[0].rrname` path
+  # can be matched. Finding both records proves the 4 TCP handshake
+  # rules and 2 UDP transport rules gated their states.
+  - shell:
+      args: 'grep -cE ''"event_type":"dns","src_ip":"192\.0\.2\.10".*"proto":"TCP".*"type":"request".*"rrname":"www\.amazon\.com"'' eve.json | xargs'
+      expect: 1
+  - shell:
+      args: 'grep -cE ''"event_type":"dns","src_ip":"192\.0\.2\.10".*"proto":"UDP".*"type":"request".*"rrname":"www\.amazon\.com"'' eve.json | xargs'
+      expect: 1
+
+  # The `alerts_suppressed` stats counter records how many alerts were
+  # elided by `noalert;` across the run. With 9 auto-accepted rules in
+  # play and flows that exercise multiple states per rule, this value
+  # must be non-zero — it is the end-to-end proof that the `noalert;`
+  # emission from the expander actually reaches the runtime alert path.
+  - shell:
+      args: grep -cE '"alerts_suppressed":[1-9][0-9]*' eve.json | xargs
+      expect: 1

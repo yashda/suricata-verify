@@ -1,0 +1,12 @@
+# Intent-Based Firewall Rules (Auto-Accept Prior States) golden-dump fixture.
+#
+# Two Prior_State_Rules — the same ones the POC packet-driven fixtures
+# exercise (fw-prior-state-tls-sni-allow task 8.1 and
+# fw-prior-state-dns-query-allow task 8.2). This fixture runs Suricata
+# with --dump-expanded-rules instead of a PCAP, captures stdout, and
+# diffs the normalized output against `dump.expected` so the expansion
+# itself is a CI-reproducible artefact rather than a one-shot demo-only
+# check.
+
+accept:tx <tls:client_hello_done $HOME_NET any -> $EXTERNAL_NET any (tls.sni; content:".amazon.com"; endswith; sid:1003;)
+accept:tx <dns:request_complete $HOME_NET any -> $EXTERNAL_NET 53 (dns.query; content:".amazon.com"; endswith; sid:3003;)

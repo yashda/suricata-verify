@@ -1,0 +1,44 @@
+# sid <SUB> (sub 1003.1: syn), auto-accepted, from <FILE>:11
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET any (flow:to_server,not_established; flags:S,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.2: syn-ack), auto-accepted, from <FILE>:11
+accept:hook tcp:all $EXTERNAL_NET any -> $HOME_NET any (flow:to_client,not_established; flags:SA,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.3: ack), auto-accepted, from <FILE>:11
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET any (flow:to_server,not_established; flags:A,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.4: post-handshake-passthrough), auto-accepted, from <FILE>:11
+accept:hook tcp:all $HOME_NET any <> $EXTERNAL_NET any (flow:established; noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.5: client_in_progress), auto-accepted, from <FILE>:11
+accept:hook tls:client_in_progress $HOME_NET any -> $EXTERNAL_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.6: server_in_progress), auto-accepted, from <FILE>:11
+accept:hook tls:server_in_progress $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.7: server_hello), auto-accepted, from <FILE>:11
+accept:hook tls:server_hello $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.8: server_cert_done), auto-accepted, from <FILE>:11
+accept:hook tls:server_cert_done $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.9: server_hello_done), auto-accepted, from <FILE>:11
+accept:hook tls:server_hello_done $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.10: server_handshake_done), auto-accepted, from <FILE>:11
+accept:hook tls:server_handshake_done $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 1003.11: server_finished), auto-accepted, from <FILE>:11
+accept:hook tls:server_finished $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid 1003 (parent), from <tls:client_hello_done at <FILE>:11
+accept:tx tls:client_hello_done $HOME_NET any -> $EXTERNAL_NET any (tls.sni; content:".amazon.com"; endswith; sid:1003;)
+# sid <SUB> (sub 3003.1: syn), auto-accepted, from <FILE>:12
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET 53 (flow:to_server,not_established; flags:S,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.2: syn-ack), auto-accepted, from <FILE>:12
+accept:hook tcp:all $EXTERNAL_NET 53 -> $HOME_NET any (flow:to_client,not_established; flags:SA,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.3: ack), auto-accepted, from <FILE>:12
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET 53 (flow:to_server,not_established; flags:A,12; noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.4: post-handshake-passthrough), auto-accepted, from <FILE>:12
+accept:hook tcp:all $HOME_NET any <> $EXTERNAL_NET 53 (flow:established; noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.5: udp-to-server), auto-accepted, from <FILE>:12
+accept:hook udp:all $HOME_NET any -> $EXTERNAL_NET 53 (noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.6: udp-to-client), auto-accepted, from <FILE>:12
+accept:hook udp:all $EXTERNAL_NET 53 -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.7: request_started), auto-accepted, from <FILE>:12
+accept:hook dns:request_started $HOME_NET any -> $EXTERNAL_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.8: response_started), auto-accepted, from <FILE>:12
+accept:hook dns:response_started $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid <SUB> (sub 3003.9: response_complete), auto-accepted, from <FILE>:12
+accept:hook dns:response_complete $EXTERNAL_NET any -> $HOME_NET any (noalert; sid:<SUB>;)
+# sid 3003 (parent), from <dns:request_complete at <FILE>:12
+accept:tx dns:request_complete $HOME_NET any -> $EXTERNAL_NET 53 (dns.query; content:".amazon.com"; endswith; sid:3003;)

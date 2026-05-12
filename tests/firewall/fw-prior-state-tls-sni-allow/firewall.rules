@@ -1,0 +1,10 @@
+# Intent-Based Firewall Rules (Auto-Accept Prior States) POC fixture:
+#
+# One Prior_State_Rule in `<` operator form. The rule loader's
+# Prior_State pipeline expands this single line into the 12-rule set
+# described in design §Worked Example (TLS SNI allow-list): 4 TCP
+# handshake rules + 7 TLS prerequisite rules + 1 Decision_Hook rule.
+# The TLS flow in the input PCAP matches the author's SNI condition
+# and drives a clean allow through every state in the trail.
+
+accept:tx <tls:client_hello_done $HOME_NET any -> $EXTERNAL_NET any (tls.sni; content:".amazon.com"; endswith; sid:1003;)

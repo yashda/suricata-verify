@@ -1,0 +1,40 @@
+%YAML 1.1
+---
+
+# Minimal suricata.yaml for the fw-prior-state-dump-expanded golden-file
+# fixture. No outputs are required — --dump-expanded-rules writes only
+# to stdout and exits before packet capture.
+
+default-log-dir: .
+
+vars:
+  address-groups:
+    HOME_NET: "[192.0.2.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+
+firewall: true
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    dns:
+      enabled: yes
+      udp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+
+logging:
+  default-log-level: warning
+  outputs:
+    - console:
+        enabled: yes
+
+action-order:
+  - pass
+  - drop
+  - reject
+  - alert
