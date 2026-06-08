@@ -1,0 +1,58 @@
+requires:
+  min-version: 9
+
+category: novel-feature
+
+pcap: false
+
+command: |
+  mkdir -p ${OUTPUT_DIR}/run1 ${OUTPUT_DIR}/run2 &&
+  ${SRCDIR}/src/suricata --engine-analysis -c ${TEST_DIR}/suricata.yaml \
+  -l ${OUTPUT_DIR}/run1 \
+  --set default-rule-path="${TEST_DIR}" \
+  --firewall-rules-exclusive=${TEST_DIR}/firewall.rules \
+  -k none 2>${OUTPUT_DIR}/run1/stderr 1>${OUTPUT_DIR}/run1/stdout ;
+  ${SRCDIR}/src/suricata --engine-analysis -c ${TEST_DIR}/suricata.yaml \
+  -l ${OUTPUT_DIR}/run2 \
+  --set default-rule-path="${TEST_DIR}" \
+  --firewall-rules-exclusive=${TEST_DIR}/firewall.rules \
+  -k none 2>${OUTPUT_DIR}/run2/stderr 1>${OUTPUT_DIR}/run2/stdout
+
+exit-code: 0
+
+checks:
+  - shell:
+      args: 'test -f run1/rules.json && test -f run2/rules.json && echo exists || echo missing'
+      expect: exists
+
+  - shell:
+      args: 'test -s run1/rules.json && echo nonempty || echo empty'
+      expect: nonempty
+
+  - shell:
+      args: 'diff -q run1/rules.json run2/rules.json > /dev/null 2>&1 && echo identical || echo differ'
+      expect: identical
+
+  - shell:
+      args: 'bash -c "diff <(sed 3d run1/rules_analysis.txt) <(sed 3d run2/rules_analysis.txt) > /dev/null 2>&1 && echo identical || echo differ"'
+      expect: identical
+
+  - shell:
+      args: 'if [ -f run1/firewall.json ] && [ -f run2/firewall.json ]; then diff -q run1/firewall.json run2/firewall.json > /dev/null 2>&1 && echo identical || echo differ; else echo identical; fi'
+      expect: identical
+
+  - shell:
+      args: 'grep -c "fw: 10 rules loaded" run1/stdout | xargs'
+      expect: 1
+
+  - shell:
+      args: 'grep -c "fw: 10 rules loaded" run2/stdout | xargs'
+      expect: 1
+
+  - shell:
+      args: 'grep -oP ''"id":\K[0-9]+'' run1/rules.json | wc -l | xargs'
+      expect: 10
+
+  - shell:
+      args: 'bash -c "diff <(grep -oP \"\\\"id\\\":\\K[0-9]+\" run1/rules.json) <(grep -oP \"\\\"id\\\":\\K[0-9]+\" run2/rules.json) > /dev/null 2>&1 && echo identical || echo differ"'
+      expect: identical

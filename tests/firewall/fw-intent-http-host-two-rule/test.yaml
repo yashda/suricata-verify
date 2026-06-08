@@ -1,0 +1,63 @@
+requires:
+  min-version: 9
+
+category: novel-feature
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  - shell:
+      args: 'grep -cE "Notice: detect: fw: 2 rules loaded from .*firewall\.rules" stdout | xargs'
+      expect: 1
+
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 2
+        stats.detect.engines[0].rules_failed: 0
+
+  - filter:
+      count: 0
+      match:
+        event_type: alert
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http
+        src_port: 43210
+        flow.state: "closed"
+        flow.action: "accept"
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http
+        src_port: 43220
+        flow.state: "closed"
+        not-has-key: flow.action
+
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+        src_port: 43210
+
+  - shell:
+      args: 'jq -r "select(.event_type==\"drop\" and .src_port==43220) | .pcap_cnt" eve.json | wc -l | xargs'
+      expect-not: 0
+
+  - shell:
+      args: 'jq -r "select(.event_type==\"stats\") | .stats.firewall.accepted" eve.json | tail -1 | xargs test 0 -lt && echo ok || echo fail'
+      expect: ok
+
+  - shell:
+      args: 'jq -r "select(.event_type==\"stats\") | .stats.firewall.blocked" eve.json | tail -1 | xargs test 0 -lt && echo ok || echo fail'
+      expect: ok

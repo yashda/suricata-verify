@@ -1,0 +1,4 @@
+
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET 53 (tcp.session:setup,established; app-layer-protocol:unknown,dns; sid:2001;)
+
+accept:flow dns:<request_complete $HOME_NET any -> $EXTERNAL_NET 53 (dns.query; content:"permitted.example.com"; nocase; sid:2002;)

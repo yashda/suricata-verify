@@ -1,0 +1,64 @@
+requires:
+  min-version: 9
+
+category: novel-feature
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 2
+        stats.detect.engines[0].rules_failed: 0
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        dest_port: 53
+        src_port: 55001
+        proto: TCP
+        flow.state: "closed"
+        flow.action: "accept"
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        dest_port: 53
+        src_port: 55002
+        proto: TCP
+        flow.state: "closed"
+        not-has-key: flow.action
+
+  - filter:
+      min-count: 1
+      match:
+        event_type: drop
+        src_port: 55002
+
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+        src_port: 55001
+
+  - filter:
+      count: 1
+      match:
+        event_type: dns
+        src_port: 55001
+        dns.type: query
+        dns.rrname: "permitted.example.com"
+
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 2

@@ -1,0 +1,4 @@
+
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET 80 (tcp.session:setup,established; app-layer-protocol:unknown,http; sid:1001;)
+
+accept:flow http1:<request_headers $HOME_NET any -> $EXTERNAL_NET 80 (http.host; content:"permitted.example.com"; sid:1002;)

@@ -1,0 +1,71 @@
+requires:
+  min-version: 9
+
+category: novel-feature
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 6
+        stats.detect.engines[0].rules_failed: 0
+
+  - filter:
+      count: 2
+      match:
+        event_type: alert
+        alert.signature_id: 9001
+
+  - filter:
+      count: 2
+      match:
+        event_type: alert
+        alert.signature_id: 9002
+
+  - shell:
+      args: 'echo $(( $(grep -c ''"signature_id":9001'' eve.json) - $(grep -c ''"signature_id":9002'' eve.json) )) | xargs'
+      expect: 0
+
+  - filter:
+      count: 2
+      match:
+        event_type: alert
+        alert.signature_id: 9003
+
+  - filter:
+      count: 4
+      match:
+        event_type: alert
+        alert.signature_id: 9004
+
+  - shell:
+      args: 'bash -c ''comm -12 <(jq -r "select(.event_type==\"alert\" and .alert.signature_id==9001) | .pcap_cnt" eve.json | sort -nu) <(jq -r "select(.event_type==\"alert\" and (.alert.signature_id==9003 or .alert.signature_id==9004)) | .pcap_cnt" eve.json | sort -nu) | wc -l'' | xargs'
+      expect: 0
+
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: tls
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: dns
+
+  - shell:
+      args: 'jq -r "select(.event_type==\"flow\" and (.app_proto==\"http\" or .app_proto==\"http1\")) | .app_proto" eve.json | head -1 | grep -cE "^http" | xargs'
+      expect: 1

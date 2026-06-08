@@ -1,0 +1,33 @@
+# Threat-detection (TD) rules for
+# fw-intent-app-layer-protocol-negated-unknown-shortcircuit (,
+# 4.13, 11.3).
+# These rules exercise the negated+unknown short-circuit behavior of
+# `DetectAppLayerProtocolPacketMatch`. Both rules carry negated
+# app-layer-protocol keywords that should NEVER fire alerts on this
+# PCAP because:
+# 1. During the Detection_Window (flow->alproto == ALPROTO_UNKNOWN):
+# the short-circuit returns 0 immediately — no match, no alert.
+# 2. After classification (flow->alproto == ALPROTO_TLS): the NOR
+# check fails because TLS is in the negated list — no match.
+# The expected alert count for BOTH rules is ZERO across all packets.
+# Rule design:
+# sid:9001 — single-value negated: `app-layer-protocol:!tls;`
+# Short-circuits during Detection_Window (negated + unknown).
+# After classification to TLS: !tls → FALSE (TLS matches
+# the negated value).
+# sid:9002 — multi-value negated: `app-layer-protocol:!tls,http;`
+# Same short-circuit during Detection_Window.
+# After classification to TLS: NOR(tls, http) → FALSE
+# because TLS is in the list.
+# Both rules use `flow:established` to focus on the post-handshake
+# packets where app-layer probing is active. The handshake packets
+# (SYN/SYN-ACK/ACK) do not carry application data and are less
+# interesting for this test — the short-circuit still applies to them,
+# but using `flow:established` narrows the test surface to the
+# Detection_Window boundary where the behavior matters most.
+
+# Single-value negated form (baseline behavior, preserved)
+alert tcp any any <> any any (msg:"negated single-value !tls during detection window"; flow:established; app-layer-protocol:!tls; sid:9001;)
+
+# Multi-value negated form (new in this feature, )
+alert tcp any any <> any any (msg:"negated multi-value !tls,http during detection window"; flow:established; app-layer-protocol:!tls,http; sid:9002;)

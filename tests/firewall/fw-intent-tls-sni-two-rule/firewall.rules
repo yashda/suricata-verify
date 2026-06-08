@@ -1,0 +1,3 @@
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET 443 (tcp.session:setup,established; app-layer-protocol:unknown,tls; sid:1000;)
+
+accept:flow tls:<client_hello_done $HOME_NET any -> $EXTERNAL_NET 443 (tls.sni; content:"www.amazon.com"; endswith; nocase; sid:1001;)

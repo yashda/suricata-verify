@@ -1,0 +1,22 @@
+
+
+accept:packet tcp:all any any <> any any (msg:"transport setup"; app-layer-protocol:unknown; tcp.session:setup; sid:1001;)
+
+accept:packet tcp:all any any <> any any (msg:"transport unknown+tls"; app-layer-protocol:unknown,tls; tcp.session:setup,established; sid:1002;)
+
+accept:packet tcp:all any any <> any any (msg:"transport unknown+http"; app-layer-protocol:unknown,http; tcp.session:setup,established; sid:1003;)
+
+accept:packet tcp:all any any <> any any (msg:"transport unknown+dns"; app-layer-protocol:unknown,dns; tcp.session:setup,established; sid:1004;)
+
+accept:packet tcp:all any any <> any any (msg:"transport tls final"; app-layer-protocol:tls,final; tcp.session:established; sid:1005;)
+
+accept:packet tcp:all any any <> any any (msg:"transport multi-three"; app-layer-protocol:unknown,tls,http; tcp.session:setup,established; sid:1006;)
+
+
+accept:flow tls:<client_hello_done any any -> any any (msg:"app tls sni walker"; tls.sni; content:"example.com"; sid:1007;)
+
+accept:flow http1:<request_headers any any -> any any (msg:"app http ua walker"; http.user_agent; content:"TestAgent"; sid:1008;)
+
+accept:hook tls:client_hello_done any any -> any any (msg:"app tls hook"; tls.sni; content:"test.example.com"; sid:1009;)
+
+accept:packet tcp:all any any <> any any (msg:"transport http+http2"; app-layer-protocol:unknown,http,http2; tcp.session:setup,established; sid:1010;)

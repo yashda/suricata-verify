@@ -1,0 +1,46 @@
+%YAML 1.1
+---
+
+default-log-dir: .
+
+vars:
+  address-groups:
+    HOME_NET: "[192.0.2.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    SSH_PORTS: "22"
+    SHELLCODE_PORTS: "!80"
+
+firewall: true
+
+engine-analysis:
+  rules-fast-pattern: yes
+  rules: yes
+
+stream:
+  inline: yes
+  drop-invalid: yes
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    http:
+      enabled: yes
+    http2:
+      enabled: yes
+    dns:
+      enabled: yes
+
+outputs:
+  - eve-log:
+      enabled: no
+
+logging:
+  default-log-level: notice
+  outputs:
+    - console:
+        enabled: yes

@@ -1,0 +1,61 @@
+requires:
+  min-version: 9
+
+category: novel-feature
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 2
+        stats.detect.engines[0].rules_failed: 0
+
+  - filter:
+      count: 1
+      match:
+        event_type: dns
+        dns.type: query
+        dns.rrname: "permitted.example.com"
+
+  - filter:
+      count: 1
+      match:
+        event_type: dns
+        dns.type: query
+        dns.rrname: "blocked.example.com"
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        proto: UDP
+        src_port: 55000
+        app_proto: dns
+        flow.action: "accept"
+
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        proto: UDP
+        src_port: 55001
+        app_proto: dns
+        not-has-key: flow.action
+
+  - filter:
+      min-count: 1
+      match:
+        event_type: drop
+
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+        src_port: 55000

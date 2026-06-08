@@ -1,0 +1,4 @@
+
+accept:hook udp:all $HOME_NET any -> $EXTERNAL_NET 53 (app-layer-protocol:unknown,dns; sid:2000;)
+
+accept:flow dns:<request_complete $HOME_NET any -> $EXTERNAL_NET 53 (dns.query; content:"permitted.example.com"; nocase; sid:2001;)

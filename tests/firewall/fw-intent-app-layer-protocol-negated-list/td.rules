@@ -1,0 +1,35 @@
+# Threat-detection (TD) rules for fw-intent-app-layer-protocol-negated-list
+# . These rules run in the TD pass and fire alerts independently
+# per (rule, packet) match.
+# Rule design:
+# sid 9001 — the negated multi-value rule under test:
+# `app-layer-protocol:!tls,http;`
+# NOR semantics, this matches packets whose resolved alproto
+# is known AND is NEITHER tls NOR http. On our three-flow PCAP:
+# - TLS flow (alproto=tls): does NOT match → 0 alerts from this flow
+# - HTTP flow (alproto=http): does NOT match → 0 alerts from this flow
+# - DNS flow (alproto=dns): MATCHES → alerts on DNS flow packets
+# sid 9002 — positive control: `app-layer-protocol:dns;`
+# Matches only DNS-classified packets. The alert count for sid 9002
+# should equal sid 9001's count — both identify exactly the DNS flow.
+# sid 9003 — negative control: `app-layer-protocol:tls;`
+# Matches only TLS-classified packets. Used to confirm TLS flow is
+# NOT matched by the negated rule.
+# sid 9004 — negative control: `app-layer-protocol:http;`
+# Matches only HTTP-classified (http1) packets. Used to confirm HTTP
+# flow is NOT matched by the negated rule.
+# The equivalence assertion in test.yaml:
+# count(sid 9001) == count(sid 9002) (NOR matches same as positive DNS)
+# count(sid 9001) has NO overlap with sid 9003 or sid 9004 packets
+
+# Rule under test: negated multi-value NOR semantics
+alert ip any any <> any any (msg:"negated multi-value !tls,http"; app-layer-protocol:!tls,http; sid:9001;)
+
+# Positive control: only DNS
+alert ip any any <> any any (msg:"positive control dns only"; app-layer-protocol:dns; sid:9002;)
+
+# Negative control: only TLS
+alert ip any any <> any any (msg:"negative control tls only"; app-layer-protocol:tls; sid:9003;)
+
+# Negative control: only HTTP
+alert ip any any <> any any (msg:"negative control http only"; app-layer-protocol:http; sid:9004;)
