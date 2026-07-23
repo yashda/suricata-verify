@@ -1,0 +1,51 @@
+requires:
+  min-version: 8
+
+pcap: ../../mqtt311-pub-qos2/input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook
+- filter:
+    count: 15
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# MQTT request transaction accepted by the app-layer hook
+- filter:
+    count: 5
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: mqtt
+# MQTT request completion hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: mqtt
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 15
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 15
+      stats.firewall.blocked: 0
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 0

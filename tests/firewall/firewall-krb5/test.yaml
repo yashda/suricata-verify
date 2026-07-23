@@ -1,0 +1,59 @@
+requires:
+  min-version: 8
+
+pcap: ../../krb5-request-frag-log/krb5-frag.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook
+- filter:
+    count: 40
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# KRB5 request transaction accepted by the app-layer hook
+- filter:
+    count: 3
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: krb5
+# KRB5 response transaction accepted by the app-layer hook
+- filter:
+    count: 3
+    match:
+      event_type: alert
+      alert.signature_id: 2001
+      alert.engine: fw
+      app_proto: krb5
+# KRB5 request completion hook
+- filter:
+    count: 3
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: krb5
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 37
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 37
+      stats.firewall.blocked: 15
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 3

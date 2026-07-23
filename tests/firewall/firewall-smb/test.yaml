@@ -1,0 +1,59 @@
+requires:
+  min-version: 8
+
+pcap: ../../smb-eicar-andx/smbandx.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook
+- filter:
+    count: 28
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# SMB request transaction accepted by the app-layer hook
+- filter:
+    count: 10
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: smb
+# SMB response transaction accepted by the app-layer hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2001
+      alert.engine: fw
+      app_proto: smb
+# SMB request completion hook
+- filter:
+    count: 7
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: smb
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 28
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 28
+      stats.firewall.blocked: 0
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 0

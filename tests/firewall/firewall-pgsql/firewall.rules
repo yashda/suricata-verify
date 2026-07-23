@@ -1,0 +1,12 @@
+# Firewall-mode PGSQL test
+# Packet rules: allow TCP session setup for the PGSQL flow
+accept:hook tcp:all any any <> any any (alert; sid:1000;)
+
+# default drop
+
+# App-layer rules: accept and alert on the PGSQL transaction hooks
+accept:hook pgsql:request_started any any -> any any (alert; sid:2000;)
+accept:hook pgsql:response_started any any -> any any (alert; sid:2001;)
+accept:tx pgsql:request_complete any any -> any any (alert; sid:2002;)
+
+# default drop

@@ -1,0 +1,12 @@
+# Firewall-mode IMAP test
+# Packet rules: allow TCP session setup for the IMAP flow
+accept:hook tcp:all any any <> any any (alert; sid:1000;)
+
+# default drop
+
+# App-layer rules: accept and alert on the IMAP transaction hooks
+accept:hook imap:request_started any any -> any any (alert; sid:2000;)
+accept:hook imap:response_started any any -> any any (alert; sid:2001;)
+accept:tx imap:request_complete any any -> any any (alert; sid:2002;)
+
+# default drop

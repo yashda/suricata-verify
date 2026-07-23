@@ -1,0 +1,59 @@
+requires:
+  min-version: 8
+
+pcap: ../../quic-retry-multiple/input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# UDP packets accepted by the packet hook
+- filter:
+    count: 3
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# QUIC request transaction accepted by the app-layer hook
+- filter:
+    count: 2
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: quic
+# QUIC response transaction accepted by the app-layer hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2001
+      alert.engine: fw
+      app_proto: quic
+# QUIC request completion hook
+- filter:
+    count: 2
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: quic
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 2
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 2
+      stats.firewall.blocked: 84
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 1

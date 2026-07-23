@@ -1,0 +1,12 @@
+# Firewall-mode SMB test
+# Packet rules: allow TCP session setup for the SMB flow
+accept:hook tcp:all any any <> any any (alert; sid:1000;)
+
+# default drop
+
+# App-layer rules: accept and alert on the SMB transaction hooks
+accept:hook smb:request_started any any -> any any (alert; sid:2000;)
+accept:hook smb:response_started any any -> any any (alert; sid:2001;)
+accept:tx smb:request_complete any any -> any any (alert; sid:2002;)
+
+# default drop

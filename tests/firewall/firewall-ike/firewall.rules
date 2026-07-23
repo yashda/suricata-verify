@@ -1,0 +1,12 @@
+# Firewall-mode IKE test (UDP app-layer protocol)
+# Packet rules: allow UDP packets for the IKE flow
+accept:hook udp:all any any <> any any (alert; sid:1000;)
+
+# default drop
+
+# App-layer rules: accept and alert on the IKE transaction hooks
+accept:hook ike:request_started any any -> any any (alert; sid:2000;)
+accept:hook ike:response_started any any -> any any (alert; sid:2001;)
+accept:tx ike:request_complete any any -> any any (alert; sid:2002;)
+
+# default drop

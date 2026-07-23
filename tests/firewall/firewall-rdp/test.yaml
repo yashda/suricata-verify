@@ -1,0 +1,59 @@
+requires:
+  min-version: 8
+
+pcap: ../../rdp-protocol/RDP-003.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook
+- filter:
+    count: 12
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# RDP request transaction accepted by the app-layer hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: rdp
+# RDP response transaction accepted by the app-layer hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2001
+      alert.engine: fw
+      app_proto: rdp
+# RDP request completion hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: rdp
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 11
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 11
+      stats.firewall.blocked: 424
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 1

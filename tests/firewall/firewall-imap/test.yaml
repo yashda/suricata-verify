@@ -1,0 +1,36 @@
+requires:
+  min-version: 8
+
+pcap: ../../imap-detection/input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook. IMAP has no request/response
+# transaction hooks, so the flow is carried entirely by the packet hook.
+- filter:
+    count: 106
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 106
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 106
+      stats.firewall.blocked: 0
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 0

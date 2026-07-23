@@ -1,0 +1,51 @@
+requires:
+  min-version: 8
+
+pcap: ../../ikev2-weak-dh/IKEv2_SA_INIT_2-8-weak.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# UDP packets accepted by the packet hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# IKE request transaction accepted by the app-layer hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: ike
+# IKE request completion hook
+- filter:
+    count: 1
+    match:
+      event_type: alert
+      alert.signature_id: 2002
+      alert.engine: fw
+      app_proto: ike
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 1
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 1
+      stats.firewall.blocked: 0
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 0

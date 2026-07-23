@@ -1,0 +1,12 @@
+# Firewall-mode DHCP test (UDP app-layer protocol)
+# Packet rules: allow UDP packets for the DHCP flow
+accept:hook udp:all any any <> any any (alert; sid:1000;)
+
+# default drop
+
+# App-layer rules: accept and alert on the DHCP transaction hooks
+accept:hook dhcp:request_started any any -> any any (alert; sid:2000;)
+accept:hook dhcp:response_started any any -> any any (alert; sid:2001;)
+accept:tx dhcp:request_complete any any -> any any (alert; sid:2002;)
+
+# default drop

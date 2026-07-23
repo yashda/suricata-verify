@@ -1,0 +1,51 @@
+requires:
+  min-version: 8
+
+pcap: ../../rfb-protocol-3.8/04-vnc-openwall-3.8.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+# TCP packets accepted by the packet hook
+- filter:
+    count: 14
+    match:
+      event_type: alert
+      alert.signature_id: 1000
+      alert.engine: fw
+# RFB request transaction accepted by the app-layer hook
+- filter:
+    count: 4
+    match:
+      event_type: alert
+      alert.signature_id: 2000
+      alert.engine: fw
+      app_proto: rfb
+# RFB response transaction accepted by the app-layer hook
+- filter:
+    count: 5
+    match:
+      event_type: alert
+      alert.signature_id: 2001
+      alert.engine: fw
+      app_proto: rfb
+- filter:
+    requires:
+      lt-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.ips.accepted: 13
+      stats.ips.blocked: 0
+- filter:
+    requires:
+      min-version: 9
+    count: 1
+    match:
+      event_type: stats
+      stats.firewall.accepted: 13
+      stats.firewall.blocked: 3853
+      stats.firewall.drop_reason.rules: 0
+      stats.firewall.drop_reason.default_app_policy: 1
