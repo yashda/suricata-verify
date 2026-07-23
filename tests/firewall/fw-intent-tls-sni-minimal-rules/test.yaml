@@ -1,0 +1,62 @@
+# fw-intent-tls-sni-minimal-rules
+#
+# Integration test demonstrating that three firewall-intent keyword features
+# combined can express a TLS-SNI allow-list intent in exactly 2 rules where
+# the upstream baseline requires ~13 rules.
+#
+# Features under test (all three must be present in the linked suricata binary):
+#   - tcp.session:setup,established         (multi-value transport lifecycle)
+#   - app-layer-protocol:unknown|tls        (multi-value app-layer parser)
+#   - tls:<client_hello_done                (walker < operator, latch prior states)
+#
+# PCAP: reuses ../../tls/tls-client-hello-frag-01/dump_mtu300.pcap, the same
+# fragmented ClientHello capture used by ruletype-firewall-89-lt-sni. It
+# contains a single TLS flow with SNI "www.google.com" — the permitted case.
+# The fixture only exercises the permitted-SNI path; a mixed-SNI PCAP would
+# be needed to also exercise the drop-by-default path (see README.md TODO).
+
+requires:
+  min-version: 9
+
+pcap: ../../tls/tls-client-hello-frag-01/dump_mtu300.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  # 1. Rule load count: exactly two rules load successfully.
+  #    Proves the three-way integration compiles as a 2-rule ruleset.
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.detect.engines[0].rules_loaded: 2
+        stats.detect.engines[0].rules_failed: 0
+
+  # 2. No packets dropped: the permitted SNI (www.google.com) traverses
+  #    the full TCP+TLS lifecycle without being blocked.
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+
+  # 3. Flow accepted verdict: the single TLS flow reaches "accept" action
+  #    and closes cleanly. Packet counts match those observed for the same
+  #    PCAP under the reference walker-only fixture ruletype-firewall-89-lt-sni.
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        flow.pkts_toserver: 32
+        flow.pkts_toclient: 30
+        flow.state: "closed"
+        flow.action: "accept"
+
+  # 4. IPS accounting: all 62 packets accepted, none blocked.
+  - filter:
+      count: 1
+      match:
+        event_type: stats
+        stats.ips.accepted: 62
+        stats.ips.blocked: 0

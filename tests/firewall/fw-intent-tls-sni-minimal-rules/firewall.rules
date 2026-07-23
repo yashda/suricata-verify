@@ -1,0 +1,27 @@
+# Minimal-rule integration test for firewall-intent feature.
+#
+# Baseline (upstream today): ~13 rules required for the same intent
+# (see fw-prior-state-tls-sni-allow on feat/fw-prior-state-fixtures for the
+# 12-rule Prior_State expansion + 1 Decision_Hook rule that the auto-accept
+# POC produces from a single author-visible line).
+#
+# Post-feature: 2 rules total, using tcp.session:, multi-value
+# app-layer-protocol:, and the walker < operator.
+#
+# Rule 1 collapses the transport-layer session-lifecycle allow (was two
+# separate flow:not_established + flow:established rules per the walker
+# reference fixture ruletype-firewall-89-lt-sni) into a single hook rule
+# that also latches to unknown|tls at the app-layer boundary, letting the
+# pipeline flow through both the Detection_Window (unknown) and the TLS
+# handshake states.
+#
+# Rule 2 uses the walker < operator to auto-accept every TLS state up to
+# and including `client_hello_done`, where the author's SNI condition is
+# evaluated — replacing the 7 TLS prerequisite rules that the Prior_State
+# expansion would otherwise emit.
+
+# Rule 1 (transport-layer allow): TCP session lifecycle + TLS/unknown app-layer
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET any (msg:"TCP+TLS transport allow"; tcp.session:setup,established; app-layer-protocol:unknown|tls; sid:1000001;)
+
+# Rule 2 (app-layer allow-by-SNI): walker < operator with tls.sni condition
+accept:flow tls:<client_hello_done $HOME_NET any -> $EXTERNAL_NET any (msg:"TLS SNI allow www.google.com"; tls.sni; content:"www.google.com"; nocase; sid:1000002;)
