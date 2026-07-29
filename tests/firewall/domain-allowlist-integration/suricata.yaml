@@ -1,0 +1,52 @@
+%YAML 1.1
+---
+
+vars:
+  address-groups:
+    HOME_NET: "[192.0.2.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+
+firewall: true
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    http:
+      enabled: yes
+      detection-ports:
+        dp: 80
+    http2:
+      enabled: yes
+      http1-rules: yes
+      detection-ports:
+        dp: 8080
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert
+        - drop
+        - tls
+        - http
+        - flow
+        - stats:
+            totals: yes
+            threads: no
+            deltas: no
+  - fast:
+      enabled: yes
+      filename: fast.log
+
+logging:
+  default-log-level: notice
+  outputs:
+    - console:
+        enabled: yes

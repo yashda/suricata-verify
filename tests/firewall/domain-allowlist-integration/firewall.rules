@@ -1,0 +1,28 @@
+# =============================================================================
+# Integration test: domain allowlist using all three shorthand features
+#   - tcp.session:setup,established       (unified TCP lifecycle)
+#   - app-layer-protocol:unknown|<proto>   (multi-value detection window + proto)
+#   - <hook                                (auto-accept prior states)
+#
+# Allowed domain: example.com (and *.example.com)
+# All other domains are denied via default-drop.
+#
+# Protocols: TLS, HTTP/1, HTTP/2
+# Total: 4 rules — 1 transport + 3 app-layer
+#
+# Direction policy: only $HOME_NET may initiate connections (SYN outbound).
+# Return traffic (SYN-ACK, server responses) is implicitly forwarded by the
+# stream engine once the outbound direction is accepted and the flow is tracked.
+# =============================================================================
+
+# --- Transport layer (single rule) ---
+accept:hook tcp:all $HOME_NET any -> $EXTERNAL_NET any (tcp.session:setup,established; app-layer-protocol:unknown|http|tls|http2; sid:10;)
+
+# --- App layer: HTTP/1 (Host header) ---
+accept:flow http1:<request_headers any any -> any any (http.host; content:"example.com"; endswith; sid:100;)
+
+# --- App layer: TLS (SNI) ---
+accept:flow tls:<client_hello_done any any -> any any (tls.sni; content:"example.com"; endswith; nocase; sid:200;)
+
+# --- App layer: HTTP/2 (authority pseudo-header via http.host) ---
+accept:flow http2:stream:<request_headers any any -> any any (http.host; content:"example.com"; endswith; sid:300;)

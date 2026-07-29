@@ -1,0 +1,95 @@
+# fw-intent-domain-allowlist-integration
+#
+# Integration test: firewall-mode domain allowlisting using all three
+# shorthand features together:
+#   - tcp.session:setup,established
+#   - app-layer-protocol:unknown|<proto> (multi-value)
+#   - <hook (auto-accept prior states)
+#
+# PCAP contains 6 flows:
+#   1. TLS to www.example.com:443     (allowed — SNI matches)
+#   2. TLS to evil.test:443           (denied — SNI doesn't match)
+#   3. HTTP/1 to www.example.com:80   (allowed — Host matches)
+#   4. HTTP/1 to evil.test:80         (denied — Host doesn't match)
+#   5. HTTP/2 to www.example.com:8080 (allowed — :authority matches)
+#   6. HTTP/2 to evil.test:8080       (denied — :authority doesn't match)
+#
+# Only 4 firewall rules total:
+#   1 transport (outbound only — stream engine handles return traffic)
+#   3 app-layer (< operator with tls.sni / http.host)
+
+requires:
+  min-version: 8
+
+pcap: input.pcap
+
+args:
+  - --simulate-ips
+  - -k none
+
+checks:
+  # 1. All 4 rules loaded
+  - shell:
+      args: 'grep -cE "Notice: detect: fw: 4 rules loaded" stdout | xargs'
+      expect: 1
+
+  # 2. TLS allowed flow accepted
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: tls
+        dest_ip: "198.51.100.1"
+        flow.action: "accept"
+
+  # 3. TLS denied flow dropped
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: tls
+        dest_ip: "203.0.113.1"
+        flow.action: "drop"
+
+  # 4. HTTP/1 allowed flow accepted
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http
+        dest_ip: "198.51.100.1"
+        flow.action: "accept"
+
+  # 5. HTTP/1 denied flow dropped
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http
+        dest_ip: "203.0.113.1"
+        flow.action: "drop"
+
+  # 6. HTTP/2 allowed flow accepted
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http2
+        dest_ip: "198.51.100.1"
+        flow.action: "accept"
+
+  # 7. HTTP/2 denied flow dropped
+  - filter:
+      count: 1
+      match:
+        event_type: flow
+        app_proto: http2
+        dest_ip: "203.0.113.1"
+        flow.action: "drop"
+
+  # 8. No drops for any allowed flow
+  - filter:
+      count: 0
+      match:
+        event_type: drop
+        dest_ip: "198.51.100.1"
